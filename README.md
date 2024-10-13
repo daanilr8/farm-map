@@ -1,5 +1,11 @@
 # Simulación de Rover en Django
 
+## Demo
+
+Puedes visualizar un video de demostración del proyecto a continuación:
+
+![Video de Demostración](/media/videos/farm_map.mp4)
+
 ## Descripción del Proyecto
 
 Este proyecto es una simulación de un rover que puede recorrer parcelas o acudir a ciertos puntos de referencia para realizar funciones específicas. Ha sido desarrollado en Django, utilizando las siguientes tecnologías:
