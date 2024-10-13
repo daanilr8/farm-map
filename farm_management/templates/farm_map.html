@@ -1,0 +1,298 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farm Map with Coordinates</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="http://code.ionicframework.com/ionicons/1.5.2/css/ionicons.min.css">
+    <link rel="stylesheet" href="{% static 'leaflet.awesome-markers.css' %}"/>
+    <style>
+        body {
+            display: flex; /* Usa flexbox para organizar el layout */
+            height: 100vh; /* Asegúrate de que el cuerpo ocupe toda la altura de la ventana */
+            margin: 0; /* Eliminar márgenes por defecto */
+        }
+        #map {
+            width: 50%; /* Mapa ocupa la mitad del ancho */
+            height: 100%; /* Mapa ocupa toda la altura */
+            position: relative; /* Necesario para el solapamiento */
+        }
+        #infoPanel {
+            width: 50%; /* InfoPanel ocupa la otra mitad del ancho */
+            height: 100%; /* Asegúrate de que ocupe toda la altura */
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-left: 1px solid #ccc;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: flex-start;
+        }
+        #coordinates {
+            background-color: rgba(255, 255, 255, 0.8); /* Fondo blanco semi-transparente */
+            padding: 10px; /* Algo de padding */
+            position: absolute; /* Posicionamiento absoluto para solaparse */
+            top: 5px; /* Ajusta la posición superior */
+            right: 1100px; /* Ajusta la posición izquierda */
+            z-index: 1000; /* Asegúrate de que esté encima del mapa */
+        }
+        button {
+            margin: 10px 0;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #roverStatus {
+            display: none; /* Ocultar inicialmente el mensaje de actividad */
+        }
+        #activityMessage {
+            margin-top: 20px;
+            font-weight: bold;
+            display: none; /* Ocultar inicialmente el mensaje de actividad */
+        }
+        #referenceButtons {
+            display: flex;
+            flex:row;
+        }
+    </style>
+</head>
+<body>
+    <div id="coordinates">Coordinates: </div> <!-- Div for showing coordinates -->
+    <div id="map"></div> <!-- Div for the map -->
+    
+    <div id="infoPanel">
+        <h2>Pulsar el botón para empezar el recorrido de la parcela del rover</h2>
+        <button id="startSimulation">Iniciar Recorrido</button>
+        <p id="roverStatus"></p>
+        <p id="activityMessage"></p>
+        <h2>Pulsa el botón para ir a algún punto de interés</h2>
+        <div id="referenceButtons"></div> <!-- Div para los botones de puntos de referencia -->
+    </div>
+
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="{% static 'leaflet.awesome-markers.js' %}"></script>
+    <script>
+        // Initialize the map
+        const map = L.map('map').setView([37.69428, -122.44586], 13); // Change coordinates and zoom based on your farm
+
+        // Add a base map (OpenStreetMap)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 30,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Function to update the coordinates display
+        function updateCoordinates(e) {
+            const coordinatesDiv = document.getElementById('coordinates');
+            const lat = e.latlng.lat.toFixed(5); // Latitude
+            const lng = e.latlng.lng.toFixed(5); // Longitude
+            coordinatesDiv.innerHTML = `Coordinates: ${lat}, ${lng}`; // Update the coordinates
+        }
+
+        // Event listener to update coordinates on mouse move
+        map.on('mousemove', updateCoordinates);
+
+        function formatTime(totalSeconds) {
+            const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+            const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+            const seconds = String(totalSeconds % 60).padStart(2, '0');
+            return `${hours}:${minutes}:${seconds}`;
+        }
+
+        function showInitRoverMessage(message) {
+            const roverStatus = document.getElementById('roverStatus');
+            roverStatus.textContent = message
+            roverStatus.style.display = 'block'; // Cambiar a 'block' para mostrarlo
+        }
+        async function showFinalRoverMessage(message) {
+            const roverStatus = document.getElementById('roverStatus');
+            roverStatus.textContent = message
+            await delay(2000)
+            roverStatus.style.display = 'none'; // Cambiar a 'block' para mostrarlo
+        }
+        async function showActivityMessage(activity) {
+            const activityMessage = document.getElementById('activityMessage');
+            activityMessage.innerHTML = 'El rover está realizando la actividad: ' + activity.name + '<br> Duración de la actividad :  ' + activity.time_required;
+            activityMessage.style.display = 'block';
+
+            // Esperar durante la duración de la actividad (por ejemplo, 10 segundos)
+            const durationInMilliseconds = timeStringToMilliseconds(activity.time_required);
+            let durationInSeconds = durationInMilliseconds / 1000;
+            console.log(durationInSeconds);
+            let intervalId;
+
+            // Función para actualizar el mensaje de la actividad
+            const updateActivityMessage = () => {
+                if (durationInSeconds >= 0) {
+                    // Mostrar el tiempo restante en el mensaje
+                    activityMessage.innerHTML = 'El rover está realizando la actividad: ' + activity.name + '<br> Duración de la actividad :  ' + activity.time_required + ' <br> Duración restante: ' + formatTime(durationInSeconds);
+                    durationInSeconds--; // Disminuir el contador
+                } else {
+                    // Detener el intervalo cuando el tiempo se agote
+                    clearInterval(intervalId);
+                    activityMessage.textContent = 'La actividad ha finalizado.';
+                    activityMessage.style.display = 'none';
+                }
+            };
+
+            // Actualizar el mensaje cada segundo
+            intervalId = setInterval(updateActivityMessage, 1000);
+
+        }
+
+        var parcels = JSON.parse('{{ parcels|escapejs }}');  // Escapa caracteres especiales
+        var reference_points = JSON.parse('{{ reference_points|escapejs }}');  // Escapa caracteres especiales
+
+        // Generar botones para cada punto de referencia
+        window.onload = function() {
+            const buttonContainer = document.getElementById('referenceButtons');
+            reference_points.features.forEach(reference => {
+                const button = document.createElement('button');
+                const lat = reference.geometry.coordinates[0];
+                const lng = reference.geometry.coordinates[1];
+                const endPoint = [lat,lng];
+                button.innerHTML = 'Ir a ' + reference.properties.activity.name + '<br> [' + lat + lng + ']';
+                button.onclick = function() {
+                    simulateRoverMovement(squareCoords[0],endPoint)
+                };
+                buttonContainer.appendChild(button);
+            });
+        };
+
+        let squareCoords = []
+
+        parcels.features.forEach(function(parcel) {
+             // Recorrer las coordenadas del polígono
+            const coordinates = parcel.geometry.coordinates;
+            coordinates.forEach(function(ring, index) {
+                ring.forEach(function(point){
+                    squareCoords.push([point[0], point[1]]);
+                    L.marker([point[0], point[1]]).addTo(map);
+                });
+            });
+        });
+        // Función para simular el retraso
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        const greenMarker = L.AwesomeMarkers.icon({
+            icon: 'coffee', // Icon type
+            markerColor: 'green' // Set to green
+        });
+        const purpleMarker = L.AwesomeMarkers.icon({
+            icon: 'coffee', // Icon type
+            markerColor: 'purple' // Set to green
+        });
+        const whiteMarker = L.AwesomeMarkers.icon({
+            icon: 'coffee', // Icon type
+            markerColor: 'white' // Set to green
+        });
+        const redMarker = L.AwesomeMarkers.icon({
+            icon: 'coffee', // Icon type
+            markerColor: 'red' // Set to green
+        });
+
+        reference_points.features.forEach(function(feature) {
+            console.log(feature.properties.activity)
+
+            if(feature.properties.activity.name === 'Revisión de Cultivos'){
+                L.marker(([feature.geometry.coordinates[0], feature.geometry.coordinates[1]]), { icon: greenMarker }).addTo(map).bindPopup('<b>Point of interest</b><br>' + feature.properties.activity.name + '<br>' + feature.properties.activity.time_required);
+            } else if(feature.properties.activity.name === 'Revisión de Riego'){
+                L.marker(([feature.geometry.coordinates[0], feature.geometry.coordinates[1]]), { icon: purpleMarker }).addTo(map).bindPopup('<b>Point of interest</b><br>' + feature.properties.activity.name + '<br>' + feature.properties.activity.time_required);
+            } else if(feature.properties.activity.name === 'Control de plagas'){
+                L.marker(([feature.geometry.coordinates[0], feature.geometry.coordinates[1]]), { icon: whiteMarker }).addTo(map).bindPopup('<b>Point of interest</b><br>' + feature.properties.activity.name + '<br>' + feature.properties.activity.time_required);
+            }else {
+                L.marker(([feature.geometry.coordinates[0], feature.geometry.coordinates[1]]), { icon: redMarker }).addTo(map).bindPopup('<b>Point of interest</b><br>' + feature.properties.activity.name + '<br>' + feature.properties.activity.time_required);
+            }
+        });
+
+
+        // Optional: Draw a polygon to visualize the square
+        L.polygon(squareCoords, { color: 'blue', fillOpacity: 0.2 }).addTo(map);
+
+        // Función para calcular la distancia entre dos puntos en grados
+        function calculateNearReferencePoint(latA,lngA) {
+            // Definir el umbral de proximidad (en grados)
+            const proximityThreshold = 0.000012; // Aproximadamente 3 metros en grados
+
+            for (const feature of reference_points.features){
+                if(!feature.properties.activity.is_complete){
+                    latB = feature.geometry.coordinates[0];
+                    lngB = feature.geometry.coordinates[1];
+                    const latDiff = latA - latB;
+                    const lngDiff = lngA - lngB;
+                    let eucladianDistance =  Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
+                    if (eucladianDistance < proximityThreshold){
+                        return feature;
+                    }
+                }
+            }
+            return null;
+        }
+        function timeStringToMilliseconds(timeString) {
+            // Separar el string en horas, minutos y segundos
+            const timeParts = timeString.split(':');
+                
+            // Extraer horas, minutos y segundos
+            const hours = parseInt(timeParts[0], 10);
+            const minutes = parseInt(timeParts[1], 10);
+            const seconds = parseInt(timeParts[2], 10);
+                
+            // Calcular el total en milisegundos
+            const milliseconds = (hours * 3600 + minutes * 60 + seconds) * 1000;
+                
+            return milliseconds;
+        }
+
+        // Función para recorrer de A a B en pasos
+        async function simulateRoverMovement(start, end) {
+            const latStep = (end[0] - start[0]) / 10; // Incremento en latitud
+            const lngStep = (end[1] - start[1]) / 10; // Incremento en longitud
+
+
+            // Recorrer los pasos
+            for (let i = 0; i <= 10; i++) {
+                let lat = start[0] + latStep * i;
+                let lng = start[1] + lngStep * i;
+                let delayActivity = 0;
+                if(i!=0){
+                    let near_reference_point = calculateNearReferencePoint(lat,lng)
+                    if(near_reference_point != null){
+                        showActivityMessage(near_reference_point.properties.activity)
+                        delayActivity = timeStringToMilliseconds(near_reference_point.properties.activity.time_required);
+                        lat = near_reference_point.geometry.coordinates[0];
+                        lng = near_reference_point.geometry.coordinates[1];
+                    }
+                    const latAnt = start[0] + latStep * (i-1);
+                    const lngAnt = start[1] + lngStep * (i-1);
+                    let pointList = [
+                        [latAnt,lngAnt],
+                        [lat,lng]
+                    ]
+                    L.polyline(pointList, { color: 'red', fillOpacity: 0.2 }).addTo(map);
+                    await delay(1000+delayActivity);
+                }
+            }
+        }
+
+        async function simulateParcelPath(pointList) {
+            showInitRoverMessage('El rover está recorriendo la parcela');
+            for (let i = 0; i < pointList.length; i++){
+                if(i!=0){
+                    await simulateRoverMovement(pointList[i-1],pointList[i])
+                }
+            }
+            showFinalRoverMessage('El rover ha terminado su recorrido')
+
+        }
+        // Agregar evento al botón para iniciar la simulación
+        document.getElementById('startSimulation').addEventListener('click', function() {
+            simulateParcelPath(squareCoords);
+        });
+    </script>
+</body>
+</html>

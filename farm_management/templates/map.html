@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rover Locations</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+</head>
+<body>
+    <h1> {{ hola }} </h1>
+    <div id="map" style="height: 500px;"></div>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map').setView([51.505, -0.09], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+       // Pasa los datos del rover serializados como JSON
+       var roverData = JSON.parse('{{ rover_data|escapejs }}');  // Escapa caracteres especiales
+
+       // Verificar en consola los datos
+       console.log("Datos del rover:", roverData);
+
+
+        roverData.features.forEach(function(feature) {
+            var marker = L.marker([feature.geometry.coordinates[1], feature.geometry.coordinates[0]]).addTo(map);
+            marker.bindPopup(feature.properties.name);  // Mostramos el nombre del rover
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+farm_management/env/*
+
+# Ignorar los archivos de caché de Python
+__pycache__/
+*.pyc
