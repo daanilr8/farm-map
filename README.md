@@ -4,7 +4,7 @@
 
 Puedes visualizar un video de demostración del proyecto a continuación:
 
-![Video de Demostración](/media/videos/farm_map.mp4)
+[![Video de Demostración](https://img.youtube.com/vi/SjwFiuJ7vp4/0.jpg)](https://www.youtube.com/watch?v=SjwFiuJ7vp4)
 
 ## Descripción del Proyecto
 
