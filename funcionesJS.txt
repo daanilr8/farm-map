@@ -1,0 +1,66 @@
+       // Función para recorrer de A a B en pasos
+        async function simulateRoverMovement(start, end) {
+            const latStep = (end[0] - start[0]) / 10; // Incremento en latitud
+            const lngStep = (end[1] - start[1]) / 10; // Incremento en longitud
+            let previousMark;
+            let actualMark = L.marker([12,21]).addTo(map);
+
+
+            // Recorrer los pasos
+            for (let i = 0; i <= 10; i++) {
+                let lat = start[0] + latStep * i;
+                let lng = start[1] + lngStep * i;
+                let delayActivity = 0;
+                if(i!=0){
+                    let near_reference_point = calculateNearReferencePoint(lat,lng);
+                    if(near_reference_point != null){
+                        showActivityMessage(near_reference_point.properties.activity)
+                        delayActivity = timeStringToMilliseconds(near_reference_point.properties.activity.time_required);
+                        lat = near_reference_point.geometry.coordinates[0];
+                        lng = near_reference_point.geometry.coordinates[1];
+                    }
+                    const latAnt = start[0] + latStep * (i-1);
+                    const lngAnt = start[1] + lngStep * (i-1);
+                    let pointList = [
+                        [latAnt,lngAnt],
+                        [lat,lng]
+                    ]
+                    actualMark.remove();
+                    roverPosition = [lat,lng];
+                    actualMark = L.marker([lat,lng], {icon : ionIconMarker }).addTo(map);
+                    L.polyline(pointList, { color: 'red', fillOpacity: 0.2 }).addTo(map);
+                    await delay(1000+delayActivity);
+                }
+            }
+            actualMark.remove();
+        }
+
+        async function simulateParcelPath(pointList) {
+            showInitRoverMessage('El rover está recorriendo la parcela');
+            for (let i = 0; i < pointList.length; i++){
+                if(i!=0){
+                    await simulateRoverMovement(pointList[i-1],pointList[i])
+                }
+            }
+            showFinalRoverMessage('El rover ha terminado su recorrido')
+
+        }
+        // Función para calcular la distancia entre dos puntos en grados
+        function calculateNearReferencePoint(latA,lngA) {
+            // Definir el umbral de proximidad (en grados)
+            const proximityThreshold = 0.000012; // Aproximadamente 3 metros en grados
+
+            for (const feature of reference_points.features){
+                if(!feature.properties.activity.is_complete){
+                    latB = feature.geometry.coordinates[0];
+                    lngB = feature.geometry.coordinates[1];
+                    const latDiff = latA - latB;
+                    const lngDiff = lngA - lngB;
+                    let eucladianDistance =  Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
+                    if (eucladianDistance < proximityThreshold){
+                        return feature;
+                    }
+                }
+            }
+            return null;
+        }

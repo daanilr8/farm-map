@@ -5,7 +5,8 @@ from django.contrib.gis.geos import Point
 import json
 from django.http import JsonResponse
 from django.http import HttpResponse
-
+from farm_management.send_rover_data import send_request
+from farm_management.calculate_route_rover import calculate_route
 
 
 def get_rover_data(request):
@@ -29,6 +30,17 @@ def post_rover_data(request):
     rover.orientation = rover_orientation
     rover.save()
     return HttpResponse('Nuevo parametro añadido')
+
+def simulate_rover_movement(request):
+
+    if request.method == 'GET':
+        startLat = request.GET.get('startLat')  
+        startLng = request.GET.get('startLng')
+        endLat = request.GET.get('endLat')
+        endLng = request.GET.get('endLng')
+    calculate_route(float(startLat),float(startLng),float(endLat),float(endLng))
+    
+    return HttpResponse('Simulaton completed')
 
 def rover_map(request):
 

@@ -7,13 +7,13 @@
     <style>
           #arrowIcon {
             font-size: 50px; /* Tamaño del icono */
-            transform: rotate(315deg); /* Rotación inicial */
+            transform: rotate(0deg); /* Rotación inicial */
             transition: transform 0.3s ease; /* Suavizar la rotación */
         }
     </style>
 </head>
 <body>
-    <h1> {{ hola }} </h1>
+    <button id="sendButton">Enviar Datos</button>
     <div id="map" style="height: 500px;"></div>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
@@ -51,6 +51,7 @@
                 roverName = feature.properties.name;
                 console.log(roverLng)
                 console.log(roverLat)
+                console.log(roverOrient)
                 roverMark.remove()
                 roverMark = L.marker([roverLng,roverLat], {icon: ionIconMarker}).addTo(map).bindPopup(roverName)
                 rotateIcon(roverOrient)
@@ -60,6 +61,23 @@
 
         // Llamar a la función cada cierto tiempo para refrescar datos
         setInterval(fetchData, 1000); // Actualiza cada 1 segundo
+
+        function simulateRoverMovement(lat,lng){
+            const url = `/simulate-rover-movement/?param1=${encodeURIComponent(lat)}&param2=${encodeURIComponent(lng)}`;
+            fetch(url)
+            .then(response =>{
+                if(!response.ok){
+                    throw new Error('Network was not ok')
+                }
+            })
+        }
+        document.getElementById('sendButton').addEventListener('click', function() {
+            // Llamar a la función con los parámetros deseados cuando se haga clic en el botón
+           const lat = 37.69455;  // Valor válido
+           const lng = -122.44559;  // Valor válido
+           simulateRoverMovement(lat,lng);
+        });
+
 
 
         var map = L.map('map').setView([37.69428, -122.44586], 13);

@@ -22,6 +22,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('get-rover-data/', views.get_rover_data, name='get_data'),
     path('post-rover-data/',views.post_rover_data, name= 'post_data'),
+    path('simulate-rover-movement/',views.simulate_rover_movement, name='simulate_rover_movement'),
     path('rover_map/',views.rover_map),
     path('farm_map/', views.farm_map),
 ]

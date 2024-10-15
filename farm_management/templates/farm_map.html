@@ -60,6 +60,13 @@
             font-size:32px;
             color:green;
         }
+        #arrowIcon {
+            font-size: 50px; /* Tamaño del icono */
+            transform: rotate(180deg); /* Rotación inicial */
+            transition: transform 0.3s ease; /* Suavizar la rotación */
+            margin-left: -30px; /* Mueve el icono 10px a la izquierda */
+            margin-top: -30px;   /* Mueve el icono 5px hacia arriba */
+        }
     </style>
 </head>
 <body>
@@ -82,7 +89,14 @@
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     <script>
 
-        let roverPosition;
+        var ionIconMarker = L.divIcon({
+            html: '<ion-icon id="arrowIcon" name="arrow-forward-outline"></ion-icon>',
+            className: 'custom-ionicon-marker' // Clase opcional para estilizar el marcador
+        });
+        function rotateIcon(degrees) {
+            const icon = document.getElementById('arrowIcon');
+            icon.style.transform = `rotate(${(270+degrees)%360}deg)`; // Aplicar la rotación
+        }
         // Initialize the map
         const map = L.map('map').setView([37.69428, -122.44586], 13); // Change coordinates and zoom based on your farm
 
@@ -91,6 +105,40 @@
             maxZoom: 30,
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
+
+
+        let roverLat=9;
+        let roverLng=8;
+        let roverOrient=40.0;
+
+        roverMark = L.marker([roverLng,roverLat]).addTo(map)
+
+        function fetchData() {
+
+            fetch('/get-rover-data/')  // Cambia la URL según corresponda
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json()
+            })
+            .then(data => {
+                let feature = JSON.parse(data).features[0]; // Accede al primer rover (o puedes iterar si hay más)
+                roverLng = feature.geometry.coordinates[0]; // Latitud
+                roverLat = feature.geometry.coordinates[1]; // Longitud
+                roverOrient = feature.properties.orientation; // Orientación
+                roverName = feature.properties.name;
+                console.log("Longitud: " + roverLng)
+                console.log("Latitud: " + roverLat)
+                roverMark.remove()
+                roverMark = L.marker([roverLat,roverLng], {icon : ionIconMarker}).addTo(map).bindPopup(roverName)
+                rotateIcon(roverOrient)
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        // Llamar a la función cada cierto tiempo para refrescar datos
+        setInterval(fetchData, 1000); // Actualiza cada 1 segundo
 
         // Function to update the coordinates display
         function updateCoordinates(e) {
@@ -160,12 +208,12 @@
             const buttonContainer = document.getElementById('referenceButtons');
             reference_points.features.forEach(reference => {
                 const button = document.createElement('button');
-                const lat = reference.geometry.coordinates[0];
-                const lng = reference.geometry.coordinates[1];
-                const endPoint = [lat,lng];
-                button.innerHTML = 'Ir a ' + reference.properties.activity.name + '<br> [' + lat + lng + ']';
+                const lng = reference.geometry.coordinates[0];
+                const lat = reference.geometry.coordinates[1];
+                const endPoint = [lng,lat];
+                button.innerHTML = 'Ir a ' + reference.properties.activity.name + '<br> [' + lng + lat + ']';
                 button.onclick = function() {
-                    simulateRoverMovement(squareCoords[0],endPoint)
+                    simulateRoverMovement(endPoint)
                 };
                 buttonContainer.appendChild(button);
             });
@@ -179,6 +227,8 @@
             coordinates.forEach(function(ring, index) {
                 ring.forEach(function(point){
                     squareCoords.push([point[0], point[1]]);
+                    console.log("Punto[0] : " + point[0])
+                    console.log("Punto[1] : " + point[1])
                     L.marker([point[0], point[1]]).addTo(map);
                 });
             });
@@ -208,11 +258,6 @@
             icon: 'coffee', // Icon type
             markerColor: 'beige' // Set to green
         });
-        // Crear una variable con el icono de Ionicons dentro de un div
-        var ionIconMarker = L.divIcon({
-            html: '<ion-icon name="car-outline" class="custom-icon"></ion-icon>',
-            className: 'custom-ionicon-marker' // Clase opcional para estilizar el marcador
-        });
 
         reference_points.features.forEach(function(feature) {
 
@@ -231,25 +276,6 @@
         // Optional: Draw a polygon to visualize the square
         L.polygon(squareCoords, { color: 'blue', fillOpacity: 0.2 }).addTo(map);
 
-        // Función para calcular la distancia entre dos puntos en grados
-        function calculateNearReferencePoint(latA,lngA) {
-            // Definir el umbral de proximidad (en grados)
-            const proximityThreshold = 0.000012; // Aproximadamente 3 metros en grados
-
-            for (const feature of reference_points.features){
-                if(!feature.properties.activity.is_complete){
-                    latB = feature.geometry.coordinates[0];
-                    lngB = feature.geometry.coordinates[1];
-                    const latDiff = latA - latB;
-                    const lngDiff = lngA - lngB;
-                    let eucladianDistance =  Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
-                    if (eucladianDistance < proximityThreshold){
-                        return feature;
-                    }
-                }
-            }
-            return null;
-        }
         function timeStringToMilliseconds(timeString) {
             // Separar el string en horas, minutos y segundos
             const timeParts = timeString.split(':');
@@ -266,47 +292,24 @@
         }
 
         // Función para recorrer de A a B en pasos
-        async function simulateRoverMovement(start, end) {
-            const latStep = (end[0] - start[0]) / 10; // Incremento en latitud
-            const lngStep = (end[1] - start[1]) / 10; // Incremento en longitud
-            let previousMark;
-            let actualMark = L.marker([12,21]).addTo(map);
-
-
-            // Recorrer los pasos
-            for (let i = 0; i <= 10; i++) {
-                let lat = start[0] + latStep * i;
-                let lng = start[1] + lngStep * i;
-                let delayActivity = 0;
-                if(i!=0){
-                    let near_reference_point = calculateNearReferencePoint(lat,lng);
-                    if(near_reference_point != null){
-                        showActivityMessage(near_reference_point.properties.activity)
-                        delayActivity = timeStringToMilliseconds(near_reference_point.properties.activity.time_required);
-                        lat = near_reference_point.geometry.coordinates[0];
-                        lng = near_reference_point.geometry.coordinates[1];
-                    }
-                    const latAnt = start[0] + latStep * (i-1);
-                    const lngAnt = start[1] + lngStep * (i-1);
-                    let pointList = [
-                        [latAnt,lngAnt],
-                        [lat,lng]
-                    ]
-                    actualMark.remove();
-                    roverPosition = [lat,lng];
-                    actualMark = L.marker([lat,lng], {icon : ionIconMarker }).addTo(map);
-                    L.polyline(pointList, { color: 'red', fillOpacity: 0.2 }).addTo(map);
-                    await delay(1000+delayActivity);
+        function simulateRoverMovement(point) {
+            endLng = point[1]
+            endLat = point[0]
+            const url = `/simulate-rover-movement/?startLat=${encodeURIComponent(roverLat)}&startLng=${encodeURIComponent(roverLng)}&endLat=${encodeURIComponent(endLat)}&endLng=${encodeURIComponent(endLng)}`;
+            fetch(url)
+            .then(response =>{
+                if(!response.ok){
+                    throw new Error('Network was not ok')
                 }
-            }
-            actualMark.remove();
+            })
         }
 
         async function simulateParcelPath(pointList) {
             showInitRoverMessage('El rover está recorriendo la parcela');
             for (let i = 0; i < pointList.length; i++){
                 if(i!=0){
-                    await simulateRoverMovement(pointList[i-1],pointList[i])
+                    simulateRoverMovement(pointList[i])
+                    await delay(13000)
                 }
             }
             showFinalRoverMessage('El rover ha terminado su recorrido')
