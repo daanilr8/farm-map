@@ -56,6 +56,10 @@
             display: flex;
             flex:row;
         }
+        ion-icon.custom-icon {
+            font-size:32px;
+            color:green;
+        }
     </style>
 </head>
 <body>
@@ -74,7 +78,11 @@
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="{% static 'leaflet.awesome-markers.js' %}"></script>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     <script>
+
+        let roverPosition;
         // Initialize the map
         const map = L.map('map').setView([37.69428, -122.44586], 13); // Change coordinates and zoom based on your farm
 
@@ -144,6 +152,7 @@
         }
 
         var parcels = JSON.parse('{{ parcels|escapejs }}');  // Escapa caracteres especiales
+        console.log(parcels);
         var reference_points = JSON.parse('{{ reference_points|escapejs }}');  // Escapa caracteres especiales
 
         // Generar botones para cada punto de referencia
@@ -188,16 +197,24 @@
             markerColor: 'purple' // Set to green
         });
         const whiteMarker = L.AwesomeMarkers.icon({
-            icon: 'coffee', // Icon type
+            icon: 'star', // Icon type
             markerColor: 'white' // Set to green
         });
         const redMarker = L.AwesomeMarkers.icon({
-            icon: 'coffee', // Icon type
+            icon: 'bookmark', // Icon type
             markerColor: 'red' // Set to green
+        });
+        const beigeMarker = L.AwesomeMarkers.icon({
+            icon: 'coffee', // Icon type
+            markerColor: 'beige' // Set to green
+        });
+        // Crear una variable con el icono de Ionicons dentro de un div
+        var ionIconMarker = L.divIcon({
+            html: '<ion-icon name="car-outline" class="custom-icon"></ion-icon>',
+            className: 'custom-ionicon-marker' // Clase opcional para estilizar el marcador
         });
 
         reference_points.features.forEach(function(feature) {
-            console.log(feature.properties.activity)
 
             if(feature.properties.activity.name === 'Revisión de Cultivos'){
                 L.marker(([feature.geometry.coordinates[0], feature.geometry.coordinates[1]]), { icon: greenMarker }).addTo(map).bindPopup('<b>Point of interest</b><br>' + feature.properties.activity.name + '<br>' + feature.properties.activity.time_required);
@@ -252,6 +269,8 @@
         async function simulateRoverMovement(start, end) {
             const latStep = (end[0] - start[0]) / 10; // Incremento en latitud
             const lngStep = (end[1] - start[1]) / 10; // Incremento en longitud
+            let previousMark;
+            let actualMark = L.marker([12,21]).addTo(map);
 
 
             // Recorrer los pasos
@@ -260,7 +279,7 @@
                 let lng = start[1] + lngStep * i;
                 let delayActivity = 0;
                 if(i!=0){
-                    let near_reference_point = calculateNearReferencePoint(lat,lng)
+                    let near_reference_point = calculateNearReferencePoint(lat,lng);
                     if(near_reference_point != null){
                         showActivityMessage(near_reference_point.properties.activity)
                         delayActivity = timeStringToMilliseconds(near_reference_point.properties.activity.time_required);
@@ -273,10 +292,14 @@
                         [latAnt,lngAnt],
                         [lat,lng]
                     ]
+                    actualMark.remove();
+                    roverPosition = [lat,lng];
+                    actualMark = L.marker([lat,lng], {icon : ionIconMarker }).addTo(map);
                     L.polyline(pointList, { color: 'red', fillOpacity: 0.2 }).addTo(map);
                     await delay(1000+delayActivity);
                 }
             }
+            actualMark.remove();
         }
 
         async function simulateParcelPath(pointList) {

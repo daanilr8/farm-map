@@ -20,6 +20,8 @@ from farm_management import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('map/', views.map_view, name='map_view'),
+    path('get-rover-data/', views.get_rover_data, name='get_data'),
+    path('post-rover-data/',views.post_rover_data, name= 'post_data'),
+    path('rover_map/',views.rover_map),
     path('farm_map/', views.farm_map),
 ]

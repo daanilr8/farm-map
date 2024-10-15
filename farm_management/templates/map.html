@@ -4,29 +4,72 @@
     <title>Rover Locations</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+          #arrowIcon {
+            font-size: 50px; /* Tamaño del icono */
+            transform: rotate(315deg); /* Rotación inicial */
+            transition: transform 0.3s ease; /* Suavizar la rotación */
+        }
+    </style>
 </head>
 <body>
     <h1> {{ hola }} </h1>
     <div id="map" style="height: 500px;"></div>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     <script>
-        var map = L.map('map').setView([51.505, -0.09], 13);
+
+        
+        var ionIconMarker = L.divIcon({
+            html: '<ion-icon id="arrowIcon" name="arrow-forward-outline"></ion-icon>',
+            className: 'custom-ionicon-marker' // Clase opcional para estilizar el marcador
+        });
+        function rotateIcon(degrees) {
+            const icon = document.getElementById('arrowIcon');
+            icon.style.transform = `rotate(${degrees}deg)`; // Aplicar la rotación
+        }
+
+
+        let roverLat=9;
+        let roverLng=8;
+        let roverOrient;
+
+        function fetchData() {
+        fetch('/get-rover-data/')  // Cambia la URL según corresponda
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json()
+            })
+            .then(data => {
+                let feature = JSON.parse(data).features[0]; // Accede al primer rover (o puedes iterar si hay más)
+                roverLng = feature.geometry.coordinates[1]; // Longitud
+                roverLat = feature.geometry.coordinates[0]; // Latitud
+                roverOrient = feature.properties.orientation; // Orientación
+                roverName = feature.properties.name;
+                console.log(roverLng)
+                console.log(roverLat)
+                roverMark.remove()
+                roverMark = L.marker([roverLng,roverLat], {icon: ionIconMarker}).addTo(map).bindPopup(roverName)
+                rotateIcon(roverOrient)
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        // Llamar a la función cada cierto tiempo para refrescar datos
+        setInterval(fetchData, 1000); // Actualiza cada 1 segundo
+
+
+        var map = L.map('map').setView([37.69428, -122.44586], 13);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-       // Pasa los datos del rover serializados como JSON
-       var roverData = JSON.parse('{{ rover_data|escapejs }}');  // Escapa caracteres especiales
+        var roverMark = L.marker([roverLng,roverLat]).addTo(map).bindPopup("hola")
 
-       // Verificar en consola los datos
-       console.log("Datos del rover:", roverData);
-
-
-        roverData.features.forEach(function(feature) {
-            var marker = L.marker([feature.geometry.coordinates[1], feature.geometry.coordinates[0]]).addTo(map);
-            marker.bindPopup(feature.properties.name);  // Mostramos el nombre del rover
-        });
     </script>
 </body>
 </html>
