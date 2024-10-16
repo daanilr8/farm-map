@@ -295,7 +295,7 @@
         function simulateRoverMovement(point) {
             endLng = point[1]
             endLat = point[0]
-            const url = `/simulate-rover-movement/?startLat=${encodeURIComponent(roverLat)}&startLng=${encodeURIComponent(roverLng)}&endLat=${encodeURIComponent(endLat)}&endLng=${encodeURIComponent(endLng)}`;
+            const url = `/simulate-rover-movement/?endLat=${encodeURIComponent(endLat)}&endLng=${encodeURIComponent(endLng)}`;
             fetch(url)
             .then(response =>{
                 if(!response.ok){

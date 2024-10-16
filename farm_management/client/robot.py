@@ -9,12 +9,11 @@ import threading
 class Robot:
     def __init__(self, name: str):
         self.name = name
-        self.lat = 37.69428
-        self.lng = -122.44586
-        self.orientation = 30
+        self.lat = 37.69428 # Latitude HOME
+        self.lng = -122.44586 # Longitude HOME
+        self.orientation = 30 # Orientation HOME
         self.target_coordinates_queue = Queue() 
 
-    # TODO: UPDATE WITH NEW SELF VALUES.
     def calculate_bearing(self, target_lat, target_lng):
         # Convertir de grados a radianes
         latA_rad = math.radians(self.lat)
@@ -65,7 +64,7 @@ class Robot:
         # Enviar el punto de la ruta 
         url = 'http://127.0.0.1:8000/post-rover-data/'
         response = requests.post(url, json=response_data)
-            # Verificar la respuesta
+        # Verificar la respuesta
         if response.status_code == 200:
             print('Solicitud exitosa con lng:', self.lng)
             print('Solicitud exitosa con lat:', self.lat)

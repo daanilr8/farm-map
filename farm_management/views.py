@@ -49,23 +49,17 @@ def post_rover_data(request):
 def simulate_rover_movement(request):
 
     if request.method == 'GET':
-        startLat = request.GET.get('startLat')  
-        startLng = request.GET.get('startLng')
         endLat = request.GET.get('endLat')
         endLng = request.GET.get('endLng')
 
     try:
-        startLat = float(startLat)
         endLat = float(endLat)
-        startLng = float(startLng)
         endLng = float(endLng)
     except ValueError:
         return JsonResponse({'error': 'Los tipos no son correctos'},status=400)
     
     params = {
-        'startLat': startLat,
         'endLat' : endLat,
-        'startLng' : startLng,
         'endLng': endLng
     }
     postUrl = 'http://localhost:8080'
@@ -73,10 +67,8 @@ def simulate_rover_movement(request):
 
     # Verificar la respuesta
     if response.status_code == 200:
-        print('Solicitud exitosa con startLng:', startLng)
+        print('Solicitud exitosa con endLat:', endLat)
         print('Solicitud exitosa con endLng:', endLng)
-        print('Solicitud exitosa con startLat:', startLat)
-        print('Solicitud exitosa con endLat:', startLat)
     else:
         print('Error en la solicitud:', response.status_code, response.text)
     

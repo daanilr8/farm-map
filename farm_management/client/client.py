@@ -9,7 +9,6 @@ from robot import Robot
 robot = Robot(name="Rover 1")
 robot.start_navigate_robot()
 
-# TODO: How to start BaseHTTPRequestHanlder with robot name + START ROBOT THREAD calling start_robot
 class RobotClient(BaseHTTPRequestHandler):
     def __init__(self, *args, robot_name=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -47,13 +46,13 @@ class RobotClient(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(response).encode('utf-8'))
 
 
-    # Función de fábrica para pasar el nombre del robot
+# Función de fábrica para pasar el nombre del robot
 def create_robot_client(robot_name):
     def handler(*args, **kwargs):
         RobotClient(*args, robot_name=robot_name, **kwargs)
     return handler
 
-    # Configurar el servidor para escuchar en el puerto 8080
+# Configurar el servidor para escuchar en el puerto 8080
 def run(server_class=HTTPServer, port=8080):
     server_address = ('', port)
     # handler = create_robot_client(robot_name)  # Pasar el nombre del robot
