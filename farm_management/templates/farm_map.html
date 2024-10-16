@@ -307,10 +307,7 @@
         async function simulateParcelPath(pointList) {
             showInitRoverMessage('El rover está recorriendo la parcela');
             for (let i = 0; i < pointList.length; i++){
-                if(i!=0){
-                    simulateRoverMovement(pointList[i])
-                    await delay(13000)
-                }
+                simulateRoverMovement(pointList[i])
             }
             showFinalRoverMessage('El rover ha terminado su recorrido')
 
