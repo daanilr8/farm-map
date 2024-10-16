@@ -4,7 +4,8 @@
 
 Puedes visualizar un video de demostración del proyecto a continuación:
 
-[![Video de Demostración](https://img.youtube.com/vi/SjwFiuJ7vp4/0.jpg)](https://www.youtube.com/watch?v=SjwFiuJ7vp4)
+[![Video de Demostración](https://img.youtube.com/vi/q_J6SRyPkOU/0.jpg)](https://www.youtube.com/watch?v=q_J6SRyPkOU)
+
 
 ## Descripción del Proyecto
 
