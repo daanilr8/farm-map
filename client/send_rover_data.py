@@ -8,19 +8,20 @@ def send_request(lng_value,lat_value,orient_value):
 
     # Datos a enviar en la solicitud GET, con lng dinámico
     params = {
-        'id': 1,  # ID del rover
         'name': 'Rover 1',  # Nombre del rover
-        'lat' : lat_value,
+        'lat' : lat_value, # Valor dinámico de la latitud
         'lng' : lng_value,  # Valor dinámico de longitud
         'orientation': orient_value  # Orientación del rover
     }
 
     # Realizar la solicitud GET
-    response = requests.get(url, params=params)
+    response = requests.post(url, json=params)
 
     # Verificar la respuesta
     if response.status_code == 200:
         print('Solicitud exitosa con lng:', lng_value)
+        print('Solicitud exitosa con lat:', lat_value)
+        print('Solicitud exitosa con orient:', orient_value)
     else:
         print('Error en la solicitud:', response.status_code, response.text)
 
@@ -28,20 +29,16 @@ def send_request(lng_value,lat_value,orient_value):
 def main():
     parser = argparse.ArgumentParser(description='Actualizar los datos del rover.')
     # Hacer que --initial_lng sea opcional, con un valor por defecto
-    parser.add_argument('--initial_lng', type=float, default=37.69428, help='Valor inicial de la longitud.')
-    parser.add_argument('--initial_lat', type=float, default=-122.44500, help='Valor inicial de la longitud.')
-    parser.add_argument('--initial_orient', type=float, default=270.0, help='Valor inicial de la longitud.')
+    parser.add_argument('--lng', type=float, default=37.69428, help='Valor inicial de la longitud.')
+    parser.add_argument('--lat', type=float, default=-122.44500, help='Valor inicial de la latitud.')
+    parser.add_argument('--orient', type=float, default=270.0, help='Valor inicial de la orientación.')
     args = parser.parse_args()
 
-    lng = args.initial_lng
-    lat = args.initial_lat
-    orient = args.initial_orient
-
-    # Bucle para ejecutar cada 3 segundos
-    for _ in range(10):  # Por ejemplo, ejecuta 10 veces
-        send_request(lng,lat,orient)
-        lng += 0.001  # Cambia el valor de lng en cada iteración
-        time.sleep(3)  # Espera 3 segundos antes de la próxima solicitud
-
+    lng = args.lng
+    lat = args.lat
+    orient = args.orient
+    send_request(lng,lat,orient)
+    37.69443
+    -122.44570
 if __name__ == '__main__':
     main()

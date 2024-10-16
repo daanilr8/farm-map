@@ -21,7 +21,7 @@ class ReferencePoint(models.Model):
     activity = models.ForeignKey(Activity, on_delete=models.SET_NULL, null=True, blank=True, related_name='reference_points')  # Relación con la actividad
 
 
-class RoverData (models.Model):
+class RoverData(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100)
     location = models.PointField()  # Ubicación del rover

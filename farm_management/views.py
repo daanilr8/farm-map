@@ -1,3 +1,4 @@
+from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render
 from django.core.serializers import serialize
 from farm_management.models import Parcel,ReferencePoint,Activity,RoverData
@@ -5,8 +6,7 @@ from django.contrib.gis.geos import Point
 import json
 from django.http import JsonResponse
 from django.http import HttpResponse
-from farm_management.send_rover_data import send_request
-from farm_management.calculate_route_rover import calculate_route
+import requests
 
 
 def get_rover_data(request):
@@ -15,20 +15,35 @@ def get_rover_data(request):
     roverData_geojson = serialize('geojson', roverData, geometry_field='location')
     return JsonResponse(roverData_geojson,safe=False)
 
+@csrf_exempt
 def post_rover_data(request):
-
-    if request.method == 'GET':
-        rover_id = request.GET.get('id')  # ID del rover
-        rover_name = request.GET.get('name')
-        rover_lat = request.GET.get('lat')
-        rover_lng = request.GET.get('lng')
-        rover_orientation = request.GET.get('orientation')  # Orientación
     
-    rover = RoverData.objects.get(name=rover_name)
-    new_location = Point(float(rover_lng),float(rover_lat))
-    rover.location = new_location
-    rover.orientation = rover_orientation
-    rover.save()
+    if request.method == 'POST':
+         # Leer el cuerpo de la solicitud como JSON
+        data = json.loads(request.body)
+
+        # Extraer los datos del JSON
+        rover_name = data.get('name')
+        rover_lat = data.get('lat')
+        rover_lng = data.get('lng')
+        rover_orientation = data.get('orientation')
+    
+    if rover_name is None or rover_lat is None or rover_lng is None or rover_orientation is None:
+        return JsonResponse({'error': 'Faltan parametros'}, status=400)
+    
+    try:
+        rover_string_name = str(rover_name)
+        rover = RoverData.objects.get(name=rover_name)
+        rover_float_lng = float(rover_lng)
+        rover_float_lat = float(rover_lat)
+        rover_float_orientation = float(rover_orientation)
+        new_location = Point(rover_float_lat,rover_float_lng)
+        rover.location = new_location
+        rover.orientation = rover_float_orientation
+        rover.save()
+    except ValueError:
+        return JsonResponse({'error': 'Los tipos introducidos son incorrectos.'}, status=400)
+
     return HttpResponse('Nuevo parametro añadido')
 
 def simulate_rover_movement(request):
@@ -38,7 +53,32 @@ def simulate_rover_movement(request):
         startLng = request.GET.get('startLng')
         endLat = request.GET.get('endLat')
         endLng = request.GET.get('endLng')
-    calculate_route(float(startLat),float(startLng),float(endLat),float(endLng))
+
+    try:
+        startLat = float(startLat)
+        endLat = float(endLat)
+        startLng = float(startLng)
+        endLng = float(endLng)
+    except ValueError:
+        return JsonResponse({'error': 'Los tipos no son correctos'},status=400)
+    
+    params = {
+        'startLat': startLat,
+        'endLat' : endLat,
+        'startLng' : startLng,
+        'endLng': endLng
+    }
+    postUrl = 'http://localhost:8080'
+    response = requests.post(postUrl, json=params)
+
+    # Verificar la respuesta
+    if response.status_code == 200:
+        print('Solicitud exitosa con startLng:', startLng)
+        print('Solicitud exitosa con endLng:', endLng)
+        print('Solicitud exitosa con startLat:', startLat)
+        print('Solicitud exitosa con endLat:', startLat)
+    else:
+        print('Error en la solicitud:', response.status_code, response.text)
     
     return HttpResponse('Simulaton completed')
 
