@@ -124,14 +124,14 @@
             })
             .then(data => {
                 let feature = JSON.parse(data).features[0]; // Accede al primer rover (o puedes iterar si hay más)
-                roverLng = feature.geometry.coordinates[0]; // Latitud
-                roverLat = feature.geometry.coordinates[1]; // Longitud
+                roverLng = feature.geometry.coordinates[0]; 
+                roverLat = feature.geometry.coordinates[1]; 
                 roverOrient = feature.properties.orientation; // Orientación
                 roverName = feature.properties.name;
                 console.log("Longitud: " + roverLng)
                 console.log("Latitud: " + roverLat)
                 roverMark.remove()
-                roverMark = L.marker([roverLat,roverLng], {icon : ionIconMarker}).addTo(map).bindPopup(roverName)
+                roverMark = L.marker([roverLng,roverLat], {icon : ionIconMarker}).addTo(map).bindPopup(roverName)
                 rotateIcon(roverOrient)
             })
             .catch(error => console.error('Error:', error));
